@@ -6,6 +6,8 @@ The variable path definitions use standard regex matching to
 find the appropriate string to replace with a jinja2 variable syntax
 
 # Example
+
+## example config
 ```
 cat jt.config | grep -v '^#'
 ---
@@ -40,9 +42,15 @@ variablize:
       - hostname
     name: hostname
 ```
+
+## Running the utility
+```
 junos_templatize.py -c jt.config -f mx_lab.config
 template written to mx_config.j2
 template vars written to mx_config.yml
+```
+
+## Examine the resulting template and variable file
 
 ```
 cat mx_config.j2
