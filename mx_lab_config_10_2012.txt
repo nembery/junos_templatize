@@ -1,53 +1,37 @@
-# Junos Templatize
-Utility to convert Junos configuration into a jinja2 template 
-based on a YAML config file
-
-The variable path definitions use standard regex matching to 
-find the appropriate string to replace with a jinja2 variable syntax
-
-# Example
-```
-cat jt.config | grep -v '^#'
----
-
-template_name: mx_config.j2
-template_vars: mx_config.yml
-
-template_stanzas:
-  - interfaces
-  - system
-  - protocols
-
-debug: false
-
-
-variablize:
-  - path:
-      - interfaces
-      - '(?:ge|xe|et)-\d+\/\d+\/\d+'
-    name: interface
-
-  - path:
-      - interfaces
-      - '(?:lo0|(?:ge|xe|et)-\d+\/\d+\/\d+)'
-      - 'unit \d+'
-      - 'family inet'
-      - address
-    name: ip_address
-
-  - path:
-      - system
-      - hostname
-    name: hostname
-```
-junos_templatize.py -c jt.config -f mx_lab.config
-template written to mx_config.j2
-template vars written to mx_config.yml
-
-```
-cat mx_config.j2
+ services {
+        ssh;
+        netconf {
+            ssh;
+        }
+    }
+    syslog {
+        user * {
+            any emergency;
+        }
+        file messages {
+            any notice;
+            authorization info;
+        }
+        file interactive-commands {
+            interactive-commands any;
+        }
+        file default-log-messages {
+            any any;
+            match "(requested 'commit' operation)|(copying configuration to juniper.save)|ifAdminStatus|(FRU power)|(FRU removal)|(FRU insertion)|(link UP)|(vc add)|(vc delete)|transitioned|Transferred|transfer-file|QFABRIC_NETWORK_NODE_GROUP|QFABRIC_SERVER_NODE_GROUP|QFABRIC_NODE|(license add)|(license delete)|(package -X update)|(package -X delete)|GRES|CFMD_CCM_DEFECT";
+            structured-data;
+        }
+    }
+}
+chassis {
+    alarm {
+        management-ethernet {
+            link-down ignore;
+        }
+    }
+    network-services all-ethernet;
+}
 interfaces {
-    {{ interface_0 }} {
+    xe-0/0/0 {
         unit 0 {
             family inet {
                 unnumbered-address lo0.0;
@@ -55,12 +39,12 @@ interfaces {
             family mpls;
         }
     }
-    {{ interface_1 }} {
+    ge-1/0/9 {
         flexible-vlan-tagging;
         mtu 1522;
         encapsulation flexible-ethernet-services;
     }
-    {{ interface_2 }} {
+    ge-1/1/0 {
         unit 0 {
             family inet {
                 unnumbered-address lo0.0;
@@ -68,41 +52,63 @@ interfaces {
             family mpls;
         }
     }
-    {{ interface_3 }} {
+    ge-1/1/1 {
         mtu 1522;
         encapsulation ethernet-ccc;
         unit 0 {
             description "No description available for selected UNI interface.";
             family ccc {
                 filter {
-                    input filter_in_{{ interface_3 }};
+                    input filter_in_ge-1/1/1;
                 }
             }
         }
     }
-    {{ interface_4 }} {
+    ge-1/1/2 {
         mtu 1522;
         encapsulation ethernet-ccc;
     }
-    {{ interface_5 }} {
+    ge-1/1/5 {
         description "MGMT NET 10.1.254.0/25";
         unit 0 {
             family inet {
-                address {{ ip_address_0 }};
+                address 10.1.254.61/25;
             }
         }
     }
-    {{ interface_6 }} {
+    ge-1/1/9 {
         mtu 2000;
         encapsulation ethernet-ccc;
     }
     lo0 {
         unit 0 {
             family inet {
-                address {{ ip_address_1 }};
+                address 10.1.48.1/25;
             }
         }
     }
+}
+snmp {
+    community "bes@PIT" {
+        authorization read-only;
+    }
+    community "bes@PIT.MetNet" {
+        authorization read-write;
+    }
+    trap-group space {
+        targets {
+            10.1.254.123;
+        }
+    }
+}
+routing-options {
+    static {
+        route 10.1.255.0/24 next-hop 10.1.254.3;
+    }
+    forwarding-table {
+        export 048030_e_to_10_1_48_30;
+    }
+    auto-export;
 }
 protocols {
     rsvp {
@@ -111,9 +117,9 @@ protocols {
             flag state;
             flag error;
         }
-        interface {{ interface_2 }}.0;
+        interface ge-1/1/0.0;
         interface lo0.0;
-        interface {{ interface_0 }}.0;
+        interface xe-0/0/0.0;
     }
     mpls {
         log-updown {
@@ -151,18 +157,18 @@ protocols {
         path p_via_048040 {
             10.1.48.40 loose;
         }
-        interface {{ interface_2 }}.0;
+        interface ge-1/1/0.0;
         interface lo0.0;
-        interface {{ interface_0 }}.0;
+        interface xe-0/0/0.0;
     }
     ospf {
         traffic-engineering;
         export [ static direct ];
         area 0.0.0.3 {
-            interface {{ interface_2 }}.0 {
+            interface ge-1/1/0.0 {
                 interface-type p2p;
             }
-            interface {{ interface_0 }}.0 {
+            interface xe-0/0/0.0 {
                 interface-type p2p;
             }
         }
@@ -173,13 +179,13 @@ protocols {
         }
     }
     ldp {
-        interface {{ interface_0 }}.0;
-        interface {{ interface_2 }}.0;
+        interface xe-0/0/0.0;
+        interface ge-1/1/0.0;
         interface lo0.0;
     }
     l2circuit {
         neighbor 10.1.48.30 {
-            interface {{ interface_3 }}.0 {
+            interface ge-1/1/1.0 {
                 virtual-circuit-id 2;
                 no-control-word;
                 community 048030_e_to_10_1_48_30;
@@ -214,7 +220,7 @@ protocols {
                             hold-interval 10;
                         }
                         mep 2 {
-                            interface {{ interface_3 }}.0;
+                            interface ge-1/1/1.0;
                             direction up;
                             priority 0;
                             auto-discovery;
@@ -228,7 +234,7 @@ protocols {
                             hold-interval 10;
                         }
                         mep 1 {
-                            interface {{ interface_2 }}.0;
+                            interface ge-1/1/0.0;
                             direction down;
                             priority 0;
                             auto-discovery;
@@ -243,20 +249,45 @@ protocols {
         interface all;
     }
 }
-```
-
-```
-cat mx_config.yml 
----
-
-interface_0: xe-0/0/0
-interface_1: ge-1/0/9
-interface_2: ge-1/1/0
-interface_3: ge-1/1/1
-interface_4: ge-1/1/2
-interface_5: ge-1/1/5
-interface_6: ge-1/1/9
-ip_address_0: 10.1.254.61/25
-ip_address_1: 10.1.48.1/25
-
-```
+policy-options {
+    policy-statement 048030_e_to_10_1_48_30 {
+        term 048030_e_to_10_1_48_30 {
+            from community 048030_e_to_10_1_48_30;
+            then {
+                install-nexthop lsp 048030_e_to_10_1_48_30;
+                accept;
+            }
+        }
+    }
+    policy-statement direct {
+        term 1 {
+            from protocol direct;
+            then accept;
+        }
+    }
+    policy-statement static {
+        from protocol static;
+        then accept;
+    }
+    community 048030_e_to_10_1_48_30 members 11963:45234;
+}
+firewall {
+    family ccc {
+        filter filter_in_ge-1/1/1 {
+            interface-specific;
+            term 1 {
+                then {
+                    policer policer_in_ge-1/1/1;
+                    accept;
+                }
+            }
+        }
+    }
+    policer policer_in_ge-1/1/1 {
+        if-exceeding {
+            bandwidth-limit 100m;
+            burst-size-limit 15220;
+        }
+        then discard;
+    }
+}

@@ -1,0 +1,11 @@
+---
+
+interface_0: xe-0/0/0
+interface_1: ge-1/0/9
+interface_2: ge-1/1/0
+interface_3: ge-1/1/1
+interface_4: ge-1/1/2
+interface_5: ge-1/1/5
+interface_6: ge-1/1/9
+ip_address_0: 10.1.254.61/25
+ip_address_1: 10.1.48.1/25

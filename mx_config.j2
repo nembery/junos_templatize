@@ -1,51 +1,3 @@
-# Junos Templatize
-Utility to convert Junos configuration into a jinja2 template 
-based on a YAML config file
-
-The variable path definitions use standard regex matching to 
-find the appropriate string to replace with a jinja2 variable syntax
-
-# Example
-```
-cat jt.config | grep -v '^#'
----
-
-template_name: mx_config.j2
-template_vars: mx_config.yml
-
-template_stanzas:
-  - interfaces
-  - system
-  - protocols
-
-debug: false
-
-
-variablize:
-  - path:
-      - interfaces
-      - '(?:ge|xe|et)-\d+\/\d+\/\d+'
-    name: interface
-
-  - path:
-      - interfaces
-      - '(?:lo0|(?:ge|xe|et)-\d+\/\d+\/\d+)'
-      - 'unit \d+'
-      - 'family inet'
-      - address
-    name: ip_address
-
-  - path:
-      - system
-      - hostname
-    name: hostname
-```
-junos_templatize.py -c jt.config -f mx_lab.config
-template written to mx_config.j2
-template vars written to mx_config.yml
-
-```
-cat mx_config.j2
 interfaces {
     {{ interface_0 }} {
         unit 0 {
@@ -243,20 +195,3 @@ protocols {
         interface all;
     }
 }
-```
-
-```
-cat mx_config.yml 
----
-
-interface_0: xe-0/0/0
-interface_1: ge-1/0/9
-interface_2: ge-1/1/0
-interface_3: ge-1/1/1
-interface_4: ge-1/1/2
-interface_5: ge-1/1/5
-interface_6: ge-1/1/9
-ip_address_0: 10.1.254.61/25
-ip_address_1: 10.1.48.1/25
-
-```
